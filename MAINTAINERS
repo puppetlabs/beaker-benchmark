@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "file_format": "This MAINTAINERS file format is described at https://github.com/puppetlabs/maintainers",
+  "issues": "https://tickets.puppetlabs.com/browse/QA",
+  "internal_list": "https://groups.google.com/a/puppet.com/forum/?hl=en#!forum/silver-team",
+  "people": [
+    {
+      "github": "samwoods1",
+      "email": "sam.woods@puppet.com",
+      "name": "Sam Woods"
+    }
+  ]
+}
