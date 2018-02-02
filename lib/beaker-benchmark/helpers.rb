@@ -141,7 +141,6 @@ module Beaker
               @processes_to_monitor[line.split(' ').first] = { :cmd => line.split(' ')[1..-1].join(' '), :cpu_usage => [], :mem_usage => [], :disk_read => [], :disk_write => [] }
             end
           end
-          @logger.info result.stdout
         end
 
         def add_process_measure measure_type, pid, value
@@ -185,6 +184,18 @@ module Beaker
               @logger.info "Process pid: #{key}, command: '#{@processes[key][:cmd]}'"
               @logger.info "   Avg CPU: '#{@processes[key][:avg_cpu]}%', Avg MEM: #{@processes[key][:avg_mem]}, Avg DSK read: #{@processes[key][:avg_disk_read]}, Avg DSK Write: #{@processes[key][:avg_disk_write]}"
             end
+          end
+
+          def log_csv file_path="#{Dir.pwd}/atop.csv"
+            file = File.open file_path, 'w'
+            file.write "Action,Duration,Avg CPU,Avg MEM,Avg DSK read,Avg DSK Write\n"
+            file.write "#{@action_name},#{@duration},#{@avg_cpu},#{@avg_mem},#{@avg_disk_read},#{@avg_disk_write}\n\n"
+            file.write "Process pid,command,Avg CPU,Avg MEM,Avg DSK read,Avg DSK Write\n"
+            @processes.keys.each do |key|
+              file.write "#{key},'#{@processes[key][:cmd]}','#{@processes[key][:avg_cpu]},#{@processes[key][:avg_mem]},#{@processes[key][:avg_disk_read]},#{@processes[key][:avg_disk_write]}\n"
+            end
+            file.close
+            file.path
           end
         end
 
