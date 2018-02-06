@@ -117,37 +117,6 @@ describe ClassMixedWithDSLHelpers do
 
   end
 
-  describe 'PerformanceResult::initialize' do
-
-    it 'properly averages arrays of values' do
-
-    end
-
-    it 'sets overall averages to 0 if no values are set' do
-
-    end
-
-    it 'raises an exception if :mem, :cpu, :disk_read or :disk_write args do not exist' do
-
-    end
-
-    it 'creates a result without no process data if @processes_to_monitor is empty or nil' do
-
-    end
-
-    it 'raises an exception if :mem, :cpu, :disk_read or :disk_write args do not exist' do
-
-    end
-
-  end
-
-  describe 'PerformanceResult::log' do
-
-    it 'prints out the results' do
-
-    end
-
-  end
 end
 
 
