@@ -1,9 +1,12 @@
 require 'csv'
+require 'fileutils'
+require 'time'
 
 module Beaker
   module DSL
     module BeakerBenchmark
       module Helpers
+        include Beaker::HostPrebuiltSteps
         # Column indexes for atop CSV style output
         MEASURE_TYPE_INDEX = 0
 
@@ -26,6 +29,10 @@ module Beaker
         PROC_DISK_READ_INDEX = 11
         PROC_DISK_WRITE_INDEX = 13
 
+        @@session_timestamp = Time.now.getutc.to_i
+
+        TMP_DIR = "tmp/atop/#{@@session_timestamp}"
+
                 # Example usage:
         # test_name('measure_perf_on_puppetserver_start') {
         #   on(master, 'puppet resource service pe-puppetserver ensure=stopped')
@@ -42,61 +49,67 @@ module Beaker
           # Append action name to test case name if test name is available
           action_name = metadata[:case][:name] + "_#{action_name}" if defined? metadata && metadata[:case] && metadata[:case][:name]
 
-          atop_log = 'atop_log.log'
-
-          start_monitoring(infrastructure_host, atop_log, include_processes)
+          start_monitoring(infrastructure_host, action_name, include_processes)
 
           yield
 
-          stop_monitoring(infrastructure_host, action_name, atop_log, include_processes.nil? ? nil : process_regex)
+          stop_monitoring(infrastructure_host, include_processes.nil? ? nil : process_regex)
         end
 
         def setup_atop(infrastructure_host)
-          @benchmark_tmpdir = Dir.mktmpdir
           # Only install atop once per host
           unless infrastructure_host.check_for_package('atop')
-            add_el_extras(infrastructure_host)
+            add_el_extras(infrastructure_host, @options)
             infrastructure_host.install_package('atop')
           end
         end
 
-        def start_monitoring(infrastructure_host, atop_log, include_processes=false, sample_interval=1)
+        def start_monitoring(infrastructure_host, action_name, include_processes=false, sample_interval=1)
+          raise('Monitoring already in progress, call stop_monitoring before calling start_monitoring a second time') unless @beaker_benchmark_start.nil?
+          @atop_log_filename = "atop_log_#{action_name.downcase.gsub(/[^a-z0-9]/i, '_')}.log"
+          @action_name       = action_name
           setup_atop(infrastructure_host)
           additional_args = ''
           additional_args = ',PRC,PRM,PRD' if include_processes
-          atop_cmd        = "sh -c 'nohup atop -P CPU,SWP,DSK#{additional_args} -i #{sample_interval} > #{atop_log} 2>&1 &'"
+          atop_cmd        = "sh -c 'nohup atop -P CPU,SWP,DSK#{additional_args} -i #{sample_interval} >  #{@atop_log_filename} 2>&1 &'"
 
           on(infrastructure_host, atop_cmd)
           @beaker_benchmark_start = Time.now
         end
 
-        def stop_monitoring(infrastructure_host, action_name, atop_log_name, process_regex='.*')
-          if defined?@beaker_benchmark_start && !@beaker_benchmark_start.nil?
-            duration = Time.now - @beaker_benchmark_start
-          else
-            duration = nil
-          end
+        def stop_monitoring(infrastructure_host, process_regex='.*')
+          begin
+            if defined?@beaker_benchmark_start && !@beaker_benchmark_start.nil?
+              duration = Time.now - @beaker_benchmark_start
+            else
+              raise('No monitoring in progress, call start_monitoring before calling stop_monitoring')
+            end
 
-          # The atop process sticks around unless killed
-          on infrastructure_host, 'pkill -15 -f atop'
-          set_processes_to_monitor(infrastructure_host, process_regex)
-          parse_atop_log(infrastructure_host, action_name, duration, atop_log_name)
+            # The atop process sticks around unless killed
+            # It can also take some time to kill depending on how long it has been running and sampling rate.
+            retry_on infrastructure_host, 'pkill -15 -f atop', {:max_retries => 3, :retry_interval => 5}
+            set_processes_to_monitor(infrastructure_host, process_regex)
+            parse_atop_log(infrastructure_host, duration)
+          ensure
+            @beaker_benchmark_start = nil
+          end
         end
 
-        def parse_atop_log(infrastructure_host, action_name, duration, atop_log_name)
-          unless infrastructure_host.file_exist?(atop_log_name)
-            raise("atop log does not exist at #{atop_log_name}")
+        def parse_atop_log(infrastructure_host, duration)
+          unless infrastructure_host.file_exist?(@atop_log_filename)
+            raise("atop log does not exist at #{@atop_log_filename}")
           end
 
-          scp_from(infrastructure_host, atop_log_name, '/tmp')
+          log_dir = "#{TMP_DIR}/#{infrastructure_host.hostname}"
+          FileUtils::mkdir_p log_dir unless Dir.exist? log_dir
+          scp_from(infrastructure_host, @atop_log_filename, log_dir)
           cpu_usage  = []
           mem_usage  = []
           disk_read  = []
           disk_write = []
 
-          process_cpu = []
           skip        = true
-          CSV.parse(File.read("/tmp/#{File.basename(atop_log_name)}"), { :col_sep => ' ' }) do |row|
+          CSV.parse(File.read(File.expand_path(@atop_log_filename, log_dir)), { :col_sep => ' ' }) do |row|
             #skip the first entry, until the first separator 'SEP'.
             measure_type = row[MEASURE_TYPE_INDEX]
             if skip
@@ -127,7 +140,7 @@ module Beaker
             end
           end
 
-          PerformanceResult.new({ :cpu => cpu_usage, :mem => mem_usage, :disk_read => disk_read, :disk_write => disk_write, :action => action_name, :duration => duration, :processes => @processes_to_monitor, :logger => @logger})
+          PerformanceResult.new({ :cpu => cpu_usage, :mem => mem_usage, :disk_read => disk_read, :disk_write => disk_write, :action => @action_name, :duration => duration, :processes => @processes_to_monitor, :logger => @logger, :hostname => infrastructure_host})
         end
 
         def set_processes_to_monitor(infrastructure_host, process_regex)
@@ -156,7 +169,7 @@ module Beaker
         #   Process pid: 14067, command: '/opt/puppetlabs/server/apps/postgresql/bin/postgres -D /opt/puppetlabs/server/data/postgresql/9.6/data -c log_directory=/var/log/puppetlabs/postgresql'
         #       Avg CPU: '1', Avg MEM: 48888, Avg DSK Write: 20
         class PerformanceResult
-          attr_accessor :avg_cpu, :avg_mem, :avg_disk_read, :avg_disk_write, :action_name, :duration, :processes
+          attr_accessor :avg_cpu, :avg_mem, :avg_disk_read, :avg_disk_write, :action_name, :duration, :processes, :hostname
           def initialize(args)
             @avg_cpu = args[:cpu].empty? ? 0 : args[:cpu].inject{ |sum, el| sum + el } / args[:cpu].size
             @avg_mem = args[:mem].empty? ? 0 : args[:mem].inject{ |sum, el| sum + el } / args[:mem].size
@@ -166,6 +179,8 @@ module Beaker
             @duration = args[:duration]
             @processes = args[:processes]
             @logger = args[:logger]
+            @hostname = args[:hostname] || ''
+
 
             @processes.keys.each do |key|
               @processes[key][:avg_cpu] = @processes[key][:cpu_usage].inject{ |sum, el| sum + el } / @processes[key][:cpu_usage].size unless @processes[key][:cpu_usage].empty?
@@ -186,7 +201,9 @@ module Beaker
             end
           end
 
-          def log_csv file_path="#{Dir.pwd}/atop.csv"
+          def log_csv file_path=nil
+            file_path = file_path || "#{TMP_DIR}/#{@hostname}/atop_log_#{action_name.downcase.gsub(/[^a-z0-9]/i, '_')}.csv"
+            FileUtils.mkdir_p "#{TMP_DIR}/#{@hostname}/" unless Dir.exist?("#{TMP_DIR}/#{@hostname}/")
             file = File.open file_path, 'w'
             file.write "Action,Duration,Avg CPU,Avg MEM,Avg DSK read,Avg DSK Write\n"
             file.write "#{@action_name},#{@duration},#{@avg_cpu},#{@avg_mem},#{@avg_disk_read},#{@avg_disk_write}\n\n"
