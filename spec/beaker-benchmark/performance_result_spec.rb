@@ -15,7 +15,7 @@ describe ClassMixedWithDSLHelpers do
             {:cpu => [60, 40], :mem => [6000, 4000], :disk_write => [600, 400], :action => 'test_action', :duration => 10,
              :processes => {1000 => {:cmd => 'proc1', :cpu_usage => [10, 20], :mem_usage => [1000, 2000], :disk_write => [100, 200]},
                             2000 => {:cmd => 'proc2', :cpu_usage => [20, 40], :mem_usage => [2000, 4000], :disk_write => [200, 400]}},
-             :logger => logger}) }
+             :logger => logger, :hostname => 'my_host'}) }
 
   describe 'initialize' do
 
