@@ -209,7 +209,7 @@ module Beaker
             file.write "#{@action_name},#{@duration},#{@avg_cpu},#{@avg_mem},#{@avg_disk_read},#{@avg_disk_write}\n\n"
             file.write "Process pid,command,Avg CPU,Avg MEM,Avg DSK read,Avg DSK Write\n"
             @processes.keys.each do |key|
-              file.write "#{key},'#{@processes[key][:cmd]}','#{@processes[key][:avg_cpu]},#{@processes[key][:avg_mem]},#{@processes[key][:avg_disk_read]},#{@processes[key][:avg_disk_write]}\n"
+              file.write "#{key},'#{@processes[key][:cmd]}',#{@processes[key][:avg_cpu]},#{@processes[key][:avg_mem]},#{@processes[key][:avg_disk_read]},#{@processes[key][:avg_disk_write]}\n"
             end
             file.close
             file.path
