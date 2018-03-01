@@ -54,13 +54,16 @@ describe ClassMixedWithDSLHelpers do
     it 'prints out the results in CSV format' do
       file_path = subject.log_csv
       file = File.open file_path
-      csv_file_content = file.readlines
+      csv_file_content = file.read
       expected_content = <<-EOS
+Action,Duration,Avg CPU,Avg MEM,Avg DSK read,Avg DSK Write
+test_action,10,50,5000,,500
+
 Process pid,command,Avg CPU,Avg MEM,Avg DSK read,Avg DSK Write
-1000,'proc1','15,1500,,150
-2000,'proc2','30,3000,,300
+1000,'proc1',15,1500,,150
+2000,'proc2',30,3000,,300
       EOS
-      expect(csv_file_content == expected_content)
+      expect(csv_file_content).to eq(expected_content)
     end
 
   end
