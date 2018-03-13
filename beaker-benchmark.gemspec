@@ -9,7 +9,7 @@ Gem::Specification.new do |s|
   s.email       = ["silver-team@puppetlabs.com"]
   s.homepage    = "https://github.com/puppetlabs/beaker-benchmark"
   s.summary     = %q{Beaker benchmark Helpers!}
-  s.description = %q{Used to monitor performance on a puppet infrastructure node}
+  s.description = %q{Used to monitor performance on a puppet infrastructure node in a Beaker test}
   s.license     = 'Apache2'
 
   s.files         = `git ls-files`.split("\n")
