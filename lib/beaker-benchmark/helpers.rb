@@ -75,6 +75,7 @@ module Beaker
 
           on(infrastructure_host, atop_cmd)
           @beaker_benchmark_start = Time.now
+          return @@session_timestamp
         end
 
         def stop_monitoring(infrastructure_host, process_regex='.*')
