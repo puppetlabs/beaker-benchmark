@@ -2,7 +2,6 @@ require 'csv'
 require 'fileutils'
 require 'time'
 
-# UPDATED BY SLV
 module Beaker
   module DSL
     module BeakerBenchmark
