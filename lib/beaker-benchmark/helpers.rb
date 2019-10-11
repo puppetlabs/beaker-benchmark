@@ -33,7 +33,7 @@ module Beaker
 
         TMP_DIR = "tmp/atop/#{@@session_timestamp}"
 
-                # Example usage:
+        # Example usage:
         # test_name('measure_perf_on_puppetserver_start') {
         #   on(master, 'puppet resource service pe-puppetserver ensure=stopped')
         #   result = measure_perf_on(master, 'start_pe-puppetserver', true) {
@@ -135,13 +135,13 @@ module Beaker
               when 'PRM'
                 add_process_measure(:mem_usage, row[PROC_PID_INDEX], row[PROC_MEM_INDEX].to_i)
               when 'PRD'
-                # TODO: investigate why atop always shows disk_read as 0
-                # add_process_measure(:disk_read, row[PROC_PID_INDEX], row[PROC_DISK_READ_INDEX].to_i)
+                add_process_measure(:disk_read, row[PROC_PID_INDEX], row[PROC_DISK_READ_INDEX].to_i)
                 add_process_measure(:disk_write, row[PROC_PID_INDEX], row[PROC_DISK_WRITE_INDEX].to_i)
             end
           end
 
-          PerformanceResult.new({ :cpu => cpu_usage, :mem => mem_usage, :disk_read => disk_read, :disk_write => disk_write, :action => @action_name, :duration => duration, :processes => @processes_to_monitor, :logger => @logger, :hostname => infrastructure_host})
+          # rounding duration to improve results formatting
+          PerformanceResult.new({ :cpu => cpu_usage, :mem => mem_usage, :disk_read => disk_read, :disk_write => disk_write, :action => @action_name, :duration => duration.round(2), :processes => @processes_to_monitor, :logger => @logger, :hostname => infrastructure_host})
         end
 
         def set_processes_to_monitor(infrastructure_host, process_regex)
@@ -174,7 +174,7 @@ module Beaker
           def initialize(args)
             @avg_cpu = args[:cpu].empty? ? 0 : args[:cpu].inject{ |sum, el| sum + el } / args[:cpu].size
             @avg_mem = args[:mem].empty? ? 0 : args[:mem].inject{ |sum, el| sum + el } / args[:mem].size
-            # @avg_disk_read = args[:disk_read].empty? ? 0 : args[:disk_read].inject{ |sum, el| sum + el } / args[:disk_read].size
+            @avg_disk_read = args[:disk_read].empty? ? 0 : args[:disk_read].inject{ |sum, el| sum + el } / args[:disk_read].size
             @avg_disk_write = args[:disk_write].empty? ? 0 : args[:disk_write].inject{ |sum, el| sum + el } / args[:disk_write].size
             @action_name = args[:action]
             @duration = args[:duration]
@@ -186,7 +186,7 @@ module Beaker
             @processes.keys.each do |key|
               @processes[key][:avg_cpu] = @processes[key][:cpu_usage].inject{ |sum, el| sum + el } / @processes[key][:cpu_usage].size unless @processes[key][:cpu_usage].empty?
               @processes[key][:avg_mem] = @processes[key][:mem_usage].inject{ |sum, el| sum + el } / @processes[key][:mem_usage].size unless @processes[key][:mem_usage].empty?
-              # @processes[key][:avg_disk_read] = @processes[key][:disk_read].inject{ |sum, el| sum + el } / @processes[key][:disk_read].size unless @processes[key][:disk_read].empty?
+              @processes[key][:avg_disk_read] = @processes[key][:disk_read].inject{ |sum, el| sum + el } / @processes[key][:disk_read].size unless @processes[key][:disk_read].empty?
               @processes[key][:avg_disk_write] = @processes[key][:disk_write].inject{ |sum, el| sum + el } / @processes[key][:disk_write].size unless @processes[key][:disk_write].empty?
             end if @processes
             # TODO: At this point, we need to push these results into bigquery or elasticsearch
