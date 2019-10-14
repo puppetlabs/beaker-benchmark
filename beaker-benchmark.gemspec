@@ -5,7 +5,7 @@ require 'beaker-benchmark/version'
 Gem::Specification.new do |s|
   s.name        = "beaker-benchmark"
   s.version     = Beaker::DSL::BeakerBenchmark::Version::STRING
-  s.authors     = ["Puppet, Inc."]
+  s.authors     = ["Puppet"]
   s.email       = ["team-system-level-validation@puppet.com"]
   s.homepage    = "https://github.com/puppetlabs/beaker-benchmark"
   s.summary     = %q{Beaker benchmark Helpers!}
