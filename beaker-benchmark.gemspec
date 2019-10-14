@@ -5,12 +5,12 @@ require 'beaker-benchmark/version'
 Gem::Specification.new do |s|
   s.name        = "beaker-benchmark"
   s.version     = Beaker::DSL::BeakerBenchmark::Version::STRING
-  s.authors     = ["Puppetlabs"]
-  s.email       = ["silver-team@puppetlabs.com"]
+  s.authors     = ["Puppet, Inc."]
+  s.email       = ["team-system-level-validation@puppet.com"]
   s.homepage    = "https://github.com/puppetlabs/beaker-benchmark"
   s.summary     = %q{Beaker benchmark Helpers!}
   s.description = %q{Used to monitor performance on a puppet infrastructure node in a Beaker test}
-  s.license     = 'Apache2'
+  s.license     = "Apache-2.0"
 
   s.files         = `git ls-files`.split("\n")
   s.test_files    = `git ls-files -- {test,spec,features}/*`.split("\n")
