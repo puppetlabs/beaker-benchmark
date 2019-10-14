@@ -3,7 +3,7 @@ module Beaker
     module BeakerBenchmark
 
       module Version
-        STRING = '0.0.4'
+        STRING = '0.0.7'
       end
 
     end
