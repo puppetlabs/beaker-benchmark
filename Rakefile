@@ -1,4 +1,4 @@
-require 'rspec/core/rake_task'
+require "rspec/core/rake_task"
 
 namespace :test do
 
@@ -151,4 +151,9 @@ namespace :docs do
       puts "Could not find a running YARD Server"
     end
   end
+end
+
+namespace :gem do
+  # add the Bundler gem tasks (build, clean, clobber, install, release)
+  require "bundler/gem_tasks"
 end
