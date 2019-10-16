@@ -1,6 +1,8 @@
-require 'csv'
-require 'fileutils'
-require 'time'
+require "csv"
+require "fileutils"
+require "minitar"
+require "time"
+require "zlib"
 
 module Beaker
   module DSL
@@ -103,13 +105,25 @@ module Beaker
 
           log_dir = "#{TMP_DIR}/#{infrastructure_host.hostname}"
           FileUtils::mkdir_p log_dir unless Dir.exist? log_dir
-          scp_from(infrastructure_host, @atop_log_filename, log_dir)
+
+          # tar the atop log file before copying to avoid timeouts for large files (e.g. 2 week soak test)
+          tar_file_name = "#{@atop_log_filename}.tar.gz"
+          compress_cmd = "tar czf #{tar_file_name} #{@atop_log_filename}"
+          on infrastructure_host, compress_cmd
+
+          # copy the atop log file
+          scp_from(infrastructure_host, tar_file_name, log_dir)
+
+          # extract the tar file
+          tgz = Zlib::GzipReader.new(File.open("#{log_dir}/#{tar_file_name}", "rb"))
+          Archive::Tar::Minitar.unpack(tgz, log_dir)
+
           cpu_usage  = []
           mem_usage  = []
           disk_read  = []
           disk_write = []
 
-          skip        = true
+          skip = true
           CSV.parse(File.read(File.expand_path(@atop_log_filename, log_dir)), { :col_sep => ' ' }) do |row|
             #skip the first entry, until the first separator 'SEP'.
             measure_type = row[MEASURE_TYPE_INDEX]
